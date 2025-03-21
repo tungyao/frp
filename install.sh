@@ -40,6 +40,8 @@ chmod +x /etc/init.d/frp
 rc-update add frp default
 
 # 启动服务
+echo "edit frp config"
+echo "========================"
 
 read -p "bindPort: " bindPort
 bindPort=${bindPort:-7000}
