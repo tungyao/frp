@@ -7,7 +7,7 @@ generate_random_string() {
 apk update
 apk add nginx
 apk add wget
-wget https://github.com/fatedier/frp/releases/download/v0.61.2/frp_0.61.2_linux_amd64.tar.gz
+wget -O frp_0.61.2_linux_amd64.tar.gz https://github.com/fatedier/frp/releases/download/v0.61.2/frp_0.61.2_linux_amd64.tar.gz
 tar xvf frp_0.61.2_linux_amd64.tar.gz
 rm -rf frp_0.61.2_linux_amd64.tar.gz
 mv frp_0.61.2_linux_amd64 /etc/frp
@@ -55,11 +55,11 @@ user=${user:-10443}
 
 default_pass=$(generate_random_string)
 read -p "webServer.password: random($default_pass)" password
-password=${password:-$(default_pass)}
+password=${password:-$default_pass}
 
 default_token=$(generate_random_string)
 read -p "auth.token: random($default_token)" token
-token=${token:-$(default_pass)}
+token=${token:-$default_token}
 
 read -p "subDomainHost: " subDomainHost
 
