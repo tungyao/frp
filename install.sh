@@ -1,22 +1,49 @@
-#/bin/bash
-#安装nginx
+#!/bin/bash
+# 安装 nginx
+
+detect_os() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        echo $ID
+    else
+        echo "unknown"
+    fi
+}
+
+install_packages() {
+    os=$(detect_os)
+    case "$os" in
+        alpine)
+            apk update
+            apk add nginx wget
+            ;;
+        ubuntu)
+            apt update
+            apt install -y nginx wget
+            ;;
+        *)
+            echo "Unsupported OS: $os"
+            exit 1
+            ;;
+    esac
+}
 
 generate_random_string() {
     head /dev/urandom | tr -dc 'A-Za-z0-9!@#$%^&*()-_=+[]{}<>?' | head -c 32
 }
-apk update
-apk add nginx
-apk add wget
+
+# 安装必要的软件包
+install_packages
+
 wget -O frp_0.61.2_linux_amd64.tar.gz https://github.com/fatedier/frp/releases/download/v0.61.2/frp_0.61.2_linux_amd64.tar.gz
 tar xvf frp_0.61.2_linux_amd64.tar.gz
 rm -rf frp_0.61.2_linux_amd64.tar.gz
 mv frp_0.61.2_linux_amd64 /etc/frp
 
-
 # 创建 OpenRC 服务脚本
 if [ ! -f /etc/init.d/frp ]; then
-echo "not exist frp service"
-cat <<EOF > /etc/init.d/frp
+    echo "not exist frp service"
+    cat <<EOF > /etc/init.d/frp
 #!/sbin/openrc-run
 
 name="frp"
