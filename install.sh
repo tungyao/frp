@@ -4,7 +4,11 @@
 detect_os() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
-        echo $ID
+        if [ -n "$ID" ]; then
+            echo "$ID"
+        else
+            echo "unknown"
+        fi
     else
         echo "unknown"
     fi
@@ -32,18 +36,14 @@ generate_random_string() {
     head /dev/urandom | tr -dc 'A-Za-z0-9!@#$%^&*()-_=+[]{}<>?' | head -c 32
 }
 
-# 安装必要的软件包
-install_packages
-
-wget -O frp_0.61.2_linux_amd64.tar.gz https://github.com/fatedier/frp/releases/download/v0.61.2/frp_0.61.2_linux_amd64.tar.gz
-tar xvf frp_0.61.2_linux_amd64.tar.gz
-rm -rf frp_0.61.2_linux_amd64.tar.gz
-mv frp_0.61.2_linux_amd64 /etc/frp
-
-# 创建 OpenRC 服务脚本
-if [ ! -f /etc/init.d/frp ]; then
-    echo "not exist frp service"
-    cat <<EOF > /etc/init.d/frp
+setup_service() {
+    os=$(detect_os)
+    case "$os" in
+        alpine)
+            # 创建 OpenRC 服务脚本
+            if [ ! -f /etc/init.d/frp ]; then
+                echo "Creating OpenRC service for Alpine..."
+                cat <<EOF > /etc/init.d/frp
 #!/sbin/openrc-run
 
 name="frp"
@@ -58,15 +58,58 @@ depend() {
     need localmount
 }
 EOF
-fi
+                chmod +x /etc/init.d/frp
+            fi
 
-# 赋予执行权限
-chmod +x /etc/init.d/frp
+            # 添加到默认启动项并启动服务
+            rc-update add frp default
+            service frp start
+            ;;
+        ubuntu)
+            # 创建 systemd 服务文件
+            if [ ! -f /etc/systemd/system/frp.service ]; then
+                echo "Creating systemd service for Ubuntu..."
+                cat <<EOF > /etc/systemd/system/frp.service
+[Unit]
+Description=FRP Reverse Proxy Service
+After=network.target
 
-# 添加到默认启动项
-rc-update add frp default
+[Service]
+Type=simple
+ExecStart=/etc/frp/frps -c /etc/frp/frps.toml
+Restart=on-failure
 
-# 启动服务
+[Install]
+WantedBy=multi-user.target
+EOF
+                chmod 644 /etc/systemd/system/frp.service
+            fi
+
+            # 重新加载 systemd 配置，添加到启动项并启动服务
+            systemctl daemon-reload
+            systemctl enable frp
+            systemctl start frp
+            ;;
+        *)
+            echo "Unsupported OS: $os"
+            exit 1
+            ;;
+    esac
+}
+
+# 安装必要的软件包
+install_packages
+
+# 下载和配置 FRP
+wget -O frp_0.61.2_linux_amd64.tar.gz https://github.com/fatedier/frp/releases/download/v0.61.2/frp_0.61.2_linux_amd64.tar.gz
+tar xvf frp_0.61.2_linux_amd64.tar.gz
+rm -rf frp_0.61.2_linux_amd64.tar.gz
+mv frp_0.61.2_linux_amd64 /etc/frp
+
+# 配置 FRP 服务和启动项
+setup_service
+
+# 配置 FRP 的运行参数
 echo "edit frp config"
 echo "========================"
 
@@ -106,7 +149,6 @@ auth.method = "token"
 auth.token = "$token"
 
 subDomainHost = "$subDomainHost"
-
 EOF
 
-service frp start
+echo "FRP service has been set up and started!"
