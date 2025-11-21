@@ -19,7 +19,7 @@ if [ -d /usr/local/go ]; then
 fi
 
 # 获取最新的五个稳定 Go 版本
-mapfile -t versions < <(curl -s https://api.github.com/repos/tungyao/go/tags | jq -r '.[].name' | grep '^1\.[0-9]\+\.[0-9]\+$' | sort -V -r | head -n 5)
+mapfile -t versions < <(curl -s https://go-version.tungyao.cn | jq -r '.[].name' | grep '^1\.[0-9]\+\.[0-9]\+$' | sort -V -r | head -n 5)
 
 # 检查是否找到版本
 if [ ${#versions[@]} -eq 0 ]; then
